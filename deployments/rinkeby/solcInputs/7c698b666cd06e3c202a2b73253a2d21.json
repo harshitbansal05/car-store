@@ -1,0 +1,41 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/Car.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity 0.8.11;\n\nimport \"./ImmutableOwner.sol\";\n\ncontract Car is ImmutableOwner {\n    uint256 public price;\n\n    constructor(uint256 _price) ImmutableOwner(msg.sender) {\n        price = _price;\n    }\n\n    function sell(address newOwner) external onlyOwner {\n        owner = newOwner;\n    }\n}\n"
+    },
+    "contracts/ImmutableOwner.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity 0.8.11;\n\nabstract contract ImmutableOwner {\n    address public owner;\n    \n    constructor(address _owner) {\n        owner = _owner;\n    }\n\n    modifier onlyOwner {\n        require(msg.sender == owner);\n        _;\n    }    \n}\n"
+    },
+    "contracts/CarStore.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity 0.8.11;\n\nimport \"./Car.sol\";\nimport \"./ImmutableOwner.sol\";\n\ncontract CarStore is ImmutableOwner {\n    mapping(address => uint256) public cars;\n\n    constructor() ImmutableOwner(msg.sender) {}\n\n    event CarAdded(address car, uint256 price);\n    event CarSold(address indexed car, address indexed newOwner);\n\n    function addCar(uint256 price) external onlyOwner {\n        require(price > 0);\n        Car newCar = new Car(price);\n        cars[address(newCar)] = price;\n        emit CarAdded(address(newCar), price);\n    }\n\n    function sellCar(address car, address newOwner) external onlyOwner {\n        require(cars[car] > 0);\n        (bool success, bytes memory returnData) = car.staticcall(abi.encodePacked(this.owner.selector));\n        require(success);\n        address carOwner = abi.decode(returnData, (address));\n        require(address(this) == carOwner);\n        (success, ) = car.call(abi.encodeWithSelector(Car.sell.selector, (newOwner)));  \n        require(success);      \n        emit CarSold(car, newOwner);\n    }\n}\n"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": false,
+      "runs": 200
+    },
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "storageLayout",
+          "evm.gasEstimates"
+        ],
+        "": [
+          "ast"
+        ]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": true
+    }
+  }
+}
